@@ -114,8 +114,8 @@ allprojects {
         implementation("io.ebean:ebean-querybean:$ebeanVersion")
         implementation("io.ebean:ebean-migration:$ebeanMigrationVersion")
         implementation("io.ebean:ebean-ddl-generator:$ebeanVersion")
-        // kapt "io.ebean:kotlin-querybean-generator:$ebeanVersion"
-        kapt "io.ebean:querybean-generator:$ebeanVersion"
+        kapt "io.ebean:kotlin-querybean-generator:$ebeanVersion"
+        // kapt "io.ebean:querybean-generator:$ebeanVersion"
 
         // https://mvnrepository.com/artifact/io.ebean/ebean-jackson-jsonnode
         implementation("io.ebean:ebean-jackson-jsonnode:13.25.0")
