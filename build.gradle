@@ -1,0 +1,180 @@
+buildscript {
+
+    ext {
+        // https://mvnrepository.com/artifact/io.ebean/ebean
+        // https://github.com/ebean-orm/ebean/releases -> also update ebeanMigrationVersion
+        ebeanVersion = "15.8.1"
+        // https://github.com/ebean-orm-tools/ebean-gradle-plugin
+        // https://plugins.gradle.org/plugin/io.ebean
+        ebeanGradleVersion = "15.8.1"
+        // https://github.com/ebean-orm/ebean-migration/releases
+        // https://mvnrepository.com/artifact/io.ebean/ebean-migration
+        ebeanMigrationVersion = "14.2.0"
+
+        javaVersion = "21" // language version
+        jdkVersion = "21" // toolchain jdk version
+        kotlinVersion = "2.0.21" // https://kotlinlang.org/docs/releases.html#release-details
+        logbackVersion = "1.5.15" // https://mvnrepository.com/artifact/ch.qos.logback/logback-classic
+        gradleVersion = "8.10.2" // https://gradle.org/releases/
+    }
+
+    repositories {
+        mavenCentral()
+        gradlePluginPortal()
+    }
+
+    dependencies {
+        // explicitly add plugins to classpath, using the defined versions
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")
+        classpath("io.ebean:ebean-gradle-plugin:$ebeanGradleVersion")
+    }
+}
+
+plugins {
+    id("org.jetbrains.kotlin.jvm") version "$kotlinVersion"
+    id("org.jetbrains.kotlin.kapt") version "$kotlinVersion"
+}
+
+base {
+    group "de.querybeanreproducer"
+    version = project.hasProperty("versionOverwrite") ? project.versionOverwrite : "development-SNAPSHOT"
+}
+
+allprojects {
+    apply plugin: "idea"
+    apply plugin: "org.jetbrains.kotlin.jvm"
+    apply plugin: "io.ebean"
+    apply plugin: "org.jetbrains.kotlin.kapt"
+
+    idea {
+        module {
+            downloadJavadoc = true
+            downloadSources = true
+        }
+    }
+
+    java {
+        sourceCompatibility = JavaVersion.toVersion(javaVersion)
+        targetCompatibility = JavaVersion.toVersion(javaVersion)
+    }
+
+//    kapt {
+//        correctErrorTypes = true
+//    }
+
+    kotlin {
+        jvmToolchain {
+            languageVersion.set(JavaLanguageVersion.of(jdkVersion))
+        }
+    }
+
+    compileKotlin {
+        kotlinOptions {
+            // explicitly set java target version
+            jvmTarget = "$javaVersion"
+            freeCompilerArgs += [
+                "-opt-in=kotlin.RequiresOptIn,kotlinx.coroutines.ExperimentalCoroutinesApi"
+            ]
+            javaParameters = true
+        }
+    }
+
+    compileTestKotlin {
+        kotlinOptions {
+            // explicitly set java target version
+            jvmTarget = "$javaVersion"
+            freeCompilerArgs += [
+                "-opt-in=kotlin.RequiresOptIn,kotlinx.coroutines.ExperimentalCoroutinesApi"
+            ]
+            javaParameters = true
+        }
+    }
+
+    configurations.all {
+        resolutionStrategy.cacheChangingModulesFor(60, "seconds") // default 24h
+        // resolutionStrategy.cacheDynamicVersionsFor 4, 'hours' // default 24h
+    }
+
+    ebean {
+        debugLevel = 0 // set to 1 to add output to gradle build logging
+    }
+
+    repositories {
+        mavenCentral()
+    }
+
+    // declare (common) dependencies here
+    dependencies {
+
+        // ebean orm
+        // implementation(platform("io.ebean:ebean-bom:$ebeanVersion"))
+        // implementation("io.ebean:ebean:$ebeanVersion")
+        implementation("io.ebean:ebean-platform-postgres:$ebeanVersion")
+        implementation("io.ebean:ebean-postgres:$ebeanVersion")
+        implementation("io.ebean:ebean-querybean:$ebeanVersion")
+        implementation("io.ebean:ebean-migration:$ebeanMigrationVersion")
+        implementation("io.ebean:ebean-ddl-generator:$ebeanVersion")
+        // kapt "io.ebean:kotlin-querybean-generator:$ebeanVersion"
+        kapt "io.ebean:querybean-generator:$ebeanVersion"
+
+        // https://mvnrepository.com/artifact/io.ebean/ebean-jackson-jsonnode
+        implementation("io.ebean:ebean-jackson-jsonnode:13.25.0")
+        implementation("io.ebean:ebean-jackson-mapper:$ebeanVersion")
+        testImplementation("io.ebean:ebean-test:$ebeanVersion")
+
+        // https://mvnrepository.com/artifact/org.postgresql/postgresql
+        runtimeOnly("org.postgresql:postgresql:42.7.4")
+
+        // required for ebean to serialize advanced types
+        // https://mvnrepository.com/artifact/com.fasterxml.jackson.module/jackson-module-parameter-names
+        implementation("com.fasterxml.jackson.module:jackson-module-parameter-names:2.15.2")
+        // https://mvnrepository.com/artifact/com.fasterxml.jackson.datatype/jackson-datatype-jdk8
+        implementation("com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.15.2")
+        // https://mvnrepository.com/artifact/com.fasterxml.jackson.datatype/jackson-datatype-jsr310
+        implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.15.2")
+
+        // kotlin + di
+        implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion")
+        implementation("org.jetbrains.kotlin:kotlin-reflect:$kotlinVersion")
+        // https://mvnrepository.com/artifact/org.jetbrains.kotlinx/kotlinx-coroutines-jdk9
+        implementation "org.jetbrains.kotlinx:kotlinx-coroutines-jdk9:1.8.1"
+
+        // logging
+        // https://mvnrepository.com/artifact/io.github.oshai/kotlin-logging
+        implementation 'io.github.oshai:kotlin-logging:7.0.3'
+
+        // --- logging
+        implementation("ch.qos.logback:logback-classic:$logbackVersion")
+    }
+
+    test {
+        useJUnitPlatform {
+            excludeTags("integration", "generate_ddl", "manual")
+        }
+
+        testLogging {
+            showStandardStreams = true
+            exceptionFormat = "full"
+        }
+    }
+
+    task generateDDL(type: Test, group: "build") {
+        testClassesDirs = testing.suites.test.sources.output.classesDirs
+        classpath = testing.suites.test.sources.runtimeClasspath
+
+        useJUnitPlatform {
+            includeTags("generate_ddl")
+        }
+
+        testLogging {
+            showStandardStreams = true
+            exceptionFormat = "full"
+        }
+    }
+
+}
+
+wrapper {
+    gradleVersion = "$gradleVersion"
+    distributionType = Wrapper.DistributionType.ALL
+}

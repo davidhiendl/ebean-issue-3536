@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration debug="false">
+
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <withJansi>false</withJansi>
+        <encoder>
+            <pattern>%highlight(%d{HH:mm:ss.SSS} [%-29thread] %-5level - %-41(%logger{36}:%L) - %msg%n)</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="STDOUT_SQL" class="ch.qos.logback.core.ConsoleAppender">
+        <withJansi>false</withJansi>
+        <encoder>
+            <pattern>%cyan(%d{HH:mm:ss.SSS} [%-29thread] %-5level - %-41(%logger{36}:%L) - %msg%n)</pattern>
+        </encoder>
+    </appender>
+
+    <!-- default log level for everything -->
+    <root level="info">
+        <appender-ref ref="STDOUT"/>
+    </root>
+
+    <!-- ebean and query logging, use separate colored console for this -->
+    <logger name="io.ebean" level="info">
+        <appender-ref ref="STDOUT_SQL"/>
+    </logger>
+
+    <!-- control migrations log, information is mostly irrelevant outside of tests -->
+    <logger name="io.ebean.migration" level="info"/>
+
+    <!-- log level for querybeanreproducer code -->
+    <logger name="de.querybeanreproducer" level="info"/>
+
+</configuration>
